@@ -77,13 +77,16 @@
 </div>
 
 <script>
-    // [보정 로직 핵심] 애니메이션 데이터가 없는 한자를 호환 자형으로 매핑합니다.
+    // [중요] 획순 데이터가 없는 한자를 데이터가 있는 '호환 자형'으로 연결합니다.
     const charMap = {
-        '鄕': '郷', '姊': '姉', '飮': '飲', '産': '産',
-        '査': '查', // 조사할 사
-        '硏': '研', // 갈 연
-        '擧': '挙', // [해결] 들 거 애니메이션 활성화
-        '汚': '污'  // 더러울 오
+        '鄕': '郷', // 시골 향
+        '姊': '姉', // 누이 자
+        '飮': '飲', // 마실 음
+        '産': '産', // 낳을 산
+        '査': '查', // 조사할 사 (나무 목 변 위가 다름, 데이터 있음)
+        '硏': '研', // 갈 연 (데이터 있음)
+        '擧': '舉', // [핵심 수정] 들 거: '挙'(일본식)가 아닌 '舉'(번체/정자)로 연결하여 해결
+        '汚': '污'  // 더러울 오 (데이터 있음)
     };
 
     const hanjaDic = {
@@ -92,7 +95,7 @@
         "驗": "시험 험", "問": "물을 문", "題": "제목 제", "決": "결단할 결", "整": "가지런할 정", "比": "견줄 비", "較": "견줄 교", "析": "쪼갤 석", "判": "판단할 판", "斷": "끊을 단",
         "證": "증거 증", "經": "지날 경", "濟": "건널 제", "消": "사라질 소", "費": "쓸 비", "貯": "쌓을 저", "蓄": "쌓을 축", "投": "던질 투", "票": "표 표", "選": "가릴 선",
         "擧": "들 거", "權": "권세 권", "利": "이로울 리", "義": "옳을 의", "務": "힘쓸 무", "自": "스스로 자", "平": "평평할 평", "等": "무리 등", "道": "길 도", "德": "덕 덕",
-        "歷": "지낼 력", "史": "역사 사", "傳": "전할 전", "統": "거느릴 통", "文": "글월 문", "화": "될 화", "化": "될 화", "祖": "할아비 조", "上": "윗 상", "民": "백성 민", "俗": "풍속 속",
+        "歷": "지낼 력", "史": "역사 사", "傳": "전할 전", "統": "거느릴 통", "文": "글월 문", "化": "될 화", "祖": "할아비 조", "上": "윗 상", "民": "백성 민", "俗": "풍속 속",
         "人": "사람 인", "政": "정사 정", "府": "마을 부", "國": "나라 국", "會": "모일 회", "法": "법 법", "律": "법률 률", "秩": "차례 질", "序": "차례 서", "半": "반 반",
         "徑": "지름길 경", "小": "작을 소", "數": "셀 수", "分": "나눌 분", "推": "밀 추", "測": "잴 측", "正": "바를 정", "方": "모 방", "直": "곧을 직", "角": "뿔 각",
         "成": "이룰 성", "就": "나아갈 취", "和": "화할 화", "集": "모을 집", "中": "가운데 중", "志": "뜻 지", "垂": "드리울 수", "行": "다닐 행", "面": "낯 면", "積": "쌓을 적",
@@ -129,7 +132,7 @@
         const nameInput = document.getElementById('user-name-input').value.trim();
         if (!nameInput) { alert("이름을 입력해주세요!"); return; }
         currentUserName = nameInput;
-        const storageKey = 'hanjaMaster_V400_Perfect_Fixed_' + currentUserName;
+        const storageKey = 'hanjaMaster_V400_Complete_' + currentUserName;
         const saved = localStorage.getItem(storageKey);
         if(saved) userData = JSON.parse(saved);
         else userData = { points: 0, cards: [], lastIdx: 0 };
@@ -148,53 +151,4 @@
         document.getElementById('main-progress').style.width = (idx + 1) + "%";
 
         const breakdownTable = document.getElementById('hanja-breakdown');
-        breakdownTable.innerHTML = '';
-        [...data.word].forEach(char => {
-            const meaning = hanjaDic[char] || "뜻풀이 준비중";
-            breakdownTable.innerHTML += `<tr><td class="hanja-unit">${char}</td><td class="meaning-unit">${meaning}</td></tr>`;
-        });
-
-        const container = document.getElementById('writer-container');
-        container.innerHTML = ''; writers = [];
-        [...data.word].forEach((char, i) => {
-            const box = document.createElement('div');
-            box.className = 'char-box'; box.id = `char-box-${i}`;
-            container.appendChild(box);
-            // 보정 로직 적용: charMap을 통해 획순 데이터 연결
-            let drawChar = charMap[char] || char; 
-            const writer = HanziWriter.create(box.id, drawChar, { width: 120, height: 120, padding: 5, strokeColor: i % 2 === 0 ? '#9C27B0' : '#1A237E' });
-            writers.push(writer);
-        });
-        setTimeout(() => playSequence(), 500);
-
-        const qBox = document.getElementById('quiz-content');
-        const wrongIdx = (idx + 13) % 100;
-        const options = [data.desc, hanjaList[wrongIdx].desc].sort(() => Math.random() - 0.5);
-        qBox.innerHTML = `<p style="font-size:1.4rem; margin-bottom:15px;"><b>${data.word}</b> 의 올바른 뜻은?</p>`;
-        options.forEach((opt, i) => { qBox.innerHTML += `<button class="quiz-option" onclick="checkQuiz(this, '${opt}' === '${data.desc}')">${i+1}. ${opt}</button>`; });
-
-        const drawBtns = document.getElementById('draw-buttons');
-        drawBtns.innerHTML = ''; [...data.word].forEach(char => { drawBtns.innerHTML += `<button class="btn-action" onclick="startDraw('${char}')">${char} 쓰기</button>`; });
-        saveData();
-    }
-
-    async function playSequence() { for (let writer of writers) { writer.hideCharacter(); await new Promise(r => writer.animateCharacter({ onComplete: r })); } }
-    function checkQuiz(btn, isCorrect) { if(isCorrect) { btn.style.background = "#c8e6c9"; userData.points += 10; updateHeader(); alert("정답입니다! +10P ✨"); } else { btn.style.background = "#ffcdd2"; alert("다시 확인해 보세요! 🤔"); } }
-    
-    function startDraw(char) { 
-        showPage('page2'); document.getElementById('target-draw').innerHTML = ''; 
-        document.getElementById('quiz-guide').innerText = `"${char}"를 순서대로 써보세요!`; 
-        let drawChar = charMap[char] || char; // [보정 핵심] 직접 쓰기 시에도 호환 자형 사용
-        const dw = HanziWriter.create('target-draw', drawChar, { width: 240, height: 240, showCharacter: false, showHintAfterMisses: 1 }); 
-        dw.quiz({ onComplete: () => { userData.points += 20; updateHeader(); alert("참 잘했어요! +20P 👍"); }}); 
-    }
-
-    function saveToCollection() { const word = hanjaList[currentIndex].word; if(!userData.cards.includes(word)) { userData.cards.push(word); userData.points += 50; updateHeader(); alert(`'${word}' 단어를 저장했습니다! +50P 🎒`); } else alert("이미 저장된 단어입니다!"); }
-    function changeWord(n) { const next = currentIndex + n; if(next >= 0 && next < 100) loadWord(next); }
-    function updateHeader() { document.getElementById('user-pts').innerText = userData.points + "P"; saveData(); }
-    function saveData() { if(currentUserName) { localStorage.setItem('hanjaMaster_V400_Perfect_Fixed_' + currentUserName, JSON.stringify(userData)); } }
-    function showPage(pId) { document.querySelectorAll('.page').forEach(p => { if(p.id !== 'login-page') p.classList.remove('active'); }); document.getElementById(pId).classList.add('active'); if(pId === 'page3') renderCards(); }
-    function renderCards() { const list = document.getElementById('collection-list'); list.innerHTML = ''; if(userData.cards.length === 0) { list.innerHTML = '<p style="grid-column: 1/3;">수집한 단어가 없습니다.</p>'; return; } userData.cards.forEach(wordStr => { const data = hanjaList.find(i => i.word === wordStr); if(data) { list.innerHTML += `<div class="card" style="padding:15px; margin:0; border:2px solid var(--secondary);"><h3 style="margin:0; color:var(--point-blue);">${data.word}</h3><p style="margin:5px 0 0; font-size:0.9rem;">${data.desc}</p></div>`; } }); }
-</script>
-</body>
-</html>
+        breakdown
